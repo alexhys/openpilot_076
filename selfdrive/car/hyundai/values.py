@@ -193,12 +193,6 @@ FW_VERSIONS = {
     (Ecu.fwdCamera, 0x7c4, None): [b'\xf1\x00LX2 MFC  AT USA LHD 1.00 1.03 99211-S8100 190125',],
     (Ecu.transmission, 0x7e1, None): [b'\xf1\x87LDKVBN424201KF26\xba\xaa\x9a\xa9\x99\x99\x89\x98\x89\x99\xa8\x99\x88\x99\x98\x89\x88\x99\xa8\x89v\x7f\xf7\xffwf_\xffq\xa6\xf1\x81U891\x00\x00\x00\x00\x00\x00\xf1\x00bcsh8p54  U891\x00\x00\x00\x00\x00\x00SLX4G38NB2\xafL]\xe7',],
   },
-  CAR.KIA_NIRO_EV: {
-    (Ecu.fwdRadar, 0x7D0, None): [b'\xf1\x00DEev SCC F-CUP      1.00 1.03 96400-Q4100         \xf1\xa01.03'],
-    (Ecu.esp, 0x7D1, None): [b'\xf1\xa01.06'],
-    (Ecu.eps, 0x7D4, None): [b'\xf1\x00DE  MDPS C 1.00 1.05 56310Q4000\x00 4DEEC105'],
-    (Ecu.fwdCamera, 0x7C4, None): [b'\xf1\x00DEE MFC  AT USA LHD 1.00 1.03 95740-Q4000 180821'],
-  },
 }
 
 CHECKSUM = {
@@ -210,7 +204,7 @@ FEATURES = {
   "use_cluster_gears": [CAR.ELANTRA, CAR.KONA, CAR.ELANTRA_GT_I30],     # Use Cluster for Gear Selection, rather than Transmission
   "use_tcu_gears": [CAR.KIA_OPTIMA, CAR.SONATA_2019],                                    # Use TCU Message for Gear Selection
   "use_elect_gears": [CAR.KIA_OPTIMA_H, CAR.KONA_EV, CAR.GRANDEUR_HYBRID], # Use TCU Message for Gear Selection
-  "use_elect_ems": [CAR.KIA_OPTIMA_H, CAR.IONIQ_EV_LTD, CAR.KIA_NIRO_EV],
+  "use_elect_ems": [CAR.KIA_OPTIMA_H],
 }
 
 DBC = {
