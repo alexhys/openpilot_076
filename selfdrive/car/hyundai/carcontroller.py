@@ -206,15 +206,29 @@ class CarController():
 
     sys_warning, sys_state = self.process_hud_alert( lkas_active, CC )
 
-    can_sends = []
+    clu11_speed = CS.clu11["CF_Clu_Vanz"]
+    enabled_speed = 38 if CS.is_set_speed_in_mph  else 60
+    if clu11_speed > enabled_speed or not lkas_active:
+      enabled_speed = clu11_speed
+
     if frame == 0: # initialize counts from last received count signals
-      self.lkas11_cnt = CS.lkas11["CF_Lkas_MsgCount"] + 1
-    self.lkas11_cnt %= 0x10
+      self.lkas11_cnt = CS.lkas11["CF_Lkas_MsgCount"]
+    self.lkas11_cnt = (self.lkas11_cnt + 1) % 0x10
+
+    can_sends = []
 
     can_sends.append(create_lkas11(self.packer, self.lkas11_cnt, self.car_fingerprint, apply_steer, steer_req,
-                                   CS.lkas11, sys_warning, sys_state, CC ))
+                                   CS.lkas11, sys_warning, sys_state, CC, 0))
+                                   
+    if CS.mdps_bus == 1: # send lkas11 bus 1 if mdps is on bus 1
+      can_sends.append(create_lkas11(self.packer, frame, self.car_fingerprint, apply_steer, lkas_active,
+                                   CS.lkas11, sys_warning, sys_state, CC, 1))
+    if frame % 2 and CS.mdps_bus: # send clu11 to mdps if it is not on bus 0
+      can_sends.append(create_clu11(self.packer, frame, CS.mdps_bus, CS.clu11, Buttons.NONE, enabled_speed))
+      
+    if CS.mdps_bus: # send mdps12 to LKAS to prevent LKAS error if no cancel cmd
+      can_sends.append(create_mdps12(self.packer, frame, CS.mdps12))
 
-    can_sends.append(create_mdps12(self.packer, frame, CS.mdps12))
 
     str_log1 = 'torg:{:5.0f} C={:.1f}/{:.1f} V={:.1f}/{:.1f} CV={:.1f}/{:.3f}'.format(  apply_steer, CS.lead_objspd, CS.lead_distance, self.dRel, self.vRel, self.model_speed, self.model_sum )
     str_log2 = 'limit={:.0f} LC={} tm={:.1f}'.format( apply_steer_limit, path_plan.laneChangeState, self.timer1.sampleTime()  )
@@ -239,6 +253,7 @@ class CarController():
         # interval after 6 msgs
         if self.resume_cnt > 5:
           self.last_resume_frame = frame
+          self.resume_cnt = 0
     # reset lead distnce after the car starts moving
     elif self.last_lead_distance != 0:
       self.last_lead_distance = 0
@@ -251,4 +266,3 @@ class CarController():
     # counter inc
     self.lkas11_cnt += 1
     return can_sends
-
