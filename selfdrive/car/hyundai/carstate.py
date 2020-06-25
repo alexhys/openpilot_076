@@ -80,7 +80,7 @@ class CarState(CarStateBase):
     if self.acc_active:
       is_set_speed_in_mph = int(cp.vl["CLU11"]["CF_Clu_SPEED_UNIT"])
       speed_conv = CV.MPH_TO_MS if is_set_speed_in_mph else CV.KPH_TO_MS
-      ret.cruiseState.speed = self.VSetDis * speed_conv
+      ret.cruiseState.speed = cp_scc.vl["SCC11"]['VSetDis'] * speed_conv
     else:
       ret.cruiseState.speed = 0
 
