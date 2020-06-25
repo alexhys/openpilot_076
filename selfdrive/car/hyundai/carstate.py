@@ -313,15 +313,6 @@ class CarState(CarStateBase):
       ("AEB_StopReq", "SCC12", 0),
       ("CR_VSM_Alive", "SCC12", 0),
       ("CR_VSM_ChkSum", "SCC12", 0),
-      ("SCCDrvModeRValue", "SCC13", 2),
-      ("SCC_Equip", "SCC13", 1),
-      ("AebDrvSetStatus", "SCC13", 0),
-
-      ("JerkUpperLimit", "SCC14", 0),
-      ("JerkLowerLimit", "SCC14", 0),
-      ("SCCMode2", "SCC14", 0),
-      ("ComfortBandUpper", "SCC14", 0),
-      ("ComfortBandLower", "SCC14", 0),
     ]
 
     checks = [
