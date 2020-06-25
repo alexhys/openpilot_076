@@ -217,7 +217,7 @@ class CarController():
     self.lkas11_cnt %= 0x10
 
     can_sends.append(create_lkas11(self.packer, self.lkas11_cnt, self.car_fingerprint, apply_steer, steer_req,
-                                   CS.lkas11, sys_warning, sys_state, CC, 0))
+                                   CS.lkas11, sys_warning, sys_state, CC))
                                    
     if CS.mdps_bus == 1: # send lkas11 bus 1 if mdps is on bus 1
       can_sends.append(create_lkas11(self.packer, frame, self.car_fingerprint, apply_steer, lkas_active,
