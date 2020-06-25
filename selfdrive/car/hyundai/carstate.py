@@ -22,8 +22,6 @@ class CarState(CarStateBase):
     self.leftBlinker = False
     self.rightBlinker = False
     self.lkas_button_on = True
-    self.has_scc13 = CP.carFingerprint in FEATURES["has_scc13"]
-    self.has_scc14 = CP.carFingerprint in FEATURES["has_scc14"]
     self.cruise_main_button = 0
     self.mdps_error_cnt = 0
     self.spas_enabled = CP.spasEnabled
