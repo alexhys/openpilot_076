@@ -409,10 +409,7 @@ struct CarParams {
   longcontrolEnabled @51  :Bool;
   testBus @52 :List(Float32);
   mdpsBus @53: Int8;
-  sasBus @54: Int8;
-  sccBus @55: Int8;
-  autoLcaEnabled @56: Bool;
-  spasEnabled @57: Bool;
+
 
   struct LateralParams {
     torqueBP @0 :List(Int32);

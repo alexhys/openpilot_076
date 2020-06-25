@@ -17,6 +17,8 @@ class CarState(CarStateBase):
   def __init__(self, CP):
     super().__init__(CP)
 
+    self.mdps_bus = CP.mdpsBus
+    self.mdps_error_cnt = 0
     self.cruise_main_button = False
     self.cruise_buttons = False
 
