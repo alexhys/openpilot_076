@@ -1,5 +1,5 @@
 from cereal import car
-from selfdrive.car.hyundai.values import DBC, STEER_THRESHOLD, FEATURES
+from selfdrive.car.hyundai.values import DBC, STEER_THRESHOLD, FEATURES, CAR
 from selfdrive.car.interfaces import CarStateBase
 from opendbc.can.parser import CANParser
 from selfdrive.config import Conversions as CV
@@ -17,6 +17,8 @@ class CarState(CarStateBase):
   def __init__(self, CP):
     super().__init__(CP)
 
+    self.mdps_bus = CP.mdpsBus
+    self.mdps_error_cnt = 0
     self.cruise_main_button = False
     self.cruise_buttons = False
 
@@ -40,8 +42,8 @@ class CarState(CarStateBase):
     self.TSigRHSw = 0
 
   def update(self, cp, cp2, cp_cam):
-    global ATOMC
     cp_mdps = cp2 if self.mdps_bus else cp
+    global ATOMC
 
     self.prev_cruise_main_button = self.cruise_main_button
     self.prev_cruise_buttons  = self.cruise_buttons
@@ -274,18 +276,6 @@ class CarState(CarStateBase):
 
       ("CF_Lvr_GearInf", "LVR11", 0),        # Transmission Gear (0 = N or P, 1-8 = Fwd, 14 = Rev)
 
-      ("CR_Mdps_StrColTq", "MDPS12", 0),
-      ("CF_Mdps_Def", "MDPS12", 0),    #
-      ("CF_Mdps_ToiActive", "MDPS12", 0),
-      ("CF_Mdps_ToiUnavail", "MDPS12", 0),
-      ("CF_Mdps_MsgCount2", "MDPS12", 0),  #
-      ("CF_Mdps_Chksum2", "MDPS12", 0),    #
-      ("CF_Mdps_ToiFlt", "MDPS12", 0),     #
-      ("CF_Mdps_SErr", "MDPS12", 0),       #
-      ("CR_Mdps_StrTq", "MDPS12", 0),      #
-      ("CF_Mdps_FailStat", "MDPS12", 0),
-      ("CR_Mdps_OutTq", "MDPS12", 0),
-
       ("SAS_Angle", "SAS11", 0),
       ("SAS_Speed", "SAS11", 0),
 
@@ -302,7 +292,6 @@ class CarState(CarStateBase):
 
     checks = [
       # address, frequency
-      ("MDPS12", 50),
       ("TCS13", 50),
       ("TCS15", 10),
       ("CLU11", 50),
@@ -342,22 +331,16 @@ class CarState(CarStateBase):
       ]
     elif CP.carFingerprint in FEATURES["use_tcu_gears"]:
       signals += [
-        ("CUR_GR", "TCU12", 0)
-      ]
-      checks += [
-        ("TCU12", 100)
+        ("CUR_GR", "TCU12",0),
       ]
     elif CP.carFingerprint in FEATURES["use_elect_gears"]:
-      signals += [("Elect_Gear_Shifter", "ELECT_GEAR", 0)]
-      checks += [("ELECT_GEAR", 20)]
+      signals += [
+        ("Elect_Gear_Shifter", "ELECT_GEAR", 0),
+    ]
     else:
       signals += [
-        ("CF_Lvr_Gear", "LVR12", 0)
+        ("CF_Lvr_Gear","LVR12",0),
       ]
-      checks += [
-        ("LVR12", 100)
-      ]
-    
     if CP.carFingerprint not in FEATURES["use_elect_ems"]:
       signals += [
         ("PV_AV_CAN", "EMS12", 0),
@@ -376,13 +359,6 @@ class CarState(CarStateBase):
       checks += [
         ("E_EMS11", 100),
       ]
-
-    if CP.mdpsBus == 0:
-      signals += [
-        ("CR_Mdps_StrAng", "MDPS11", 0),
-        ("CF_Mdps_Stat", "MDPS11", 0),
-      ]
-      checks += [("MDPS11", 100)]
 
     return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, 0)
 
