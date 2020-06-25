@@ -8,14 +8,11 @@ from selfdrive.car.hyundai.carstate import ATOMC
 
 #from selfdrive.kegman_conf import kegman_conf
 
-GearShifter = car.CarState.GearShifter
 EventName = car.CarEvent.EventName
 ButtonType = car.CarState.ButtonEvent.Type
-
 class CarInterface(CarInterfaceBase):
   def __init__(self, CP, CarController, CarState):
-    super().__init__(CP, CarController, CarState)
-    self.cp2 = self.CS.get_can2_parser(CP)
+    super().__init__(CP, CarController, CarState )
 
 
     self.meg_timer = 0
@@ -271,52 +268,17 @@ class CarInterface(CarInterfaceBase):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront,
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
-
-    # no rear steering, at least on the listed cars above
-    ret.steerRatioRear = 0.
-    ret.steerControlType = car.CarParams.SteerControlType.torque
-
-    ret.longitudinalTuning.kpBP = [0., 10., 40.]
-    ret.longitudinalTuning.kpV = [1.2, 0.6, 0.2]
-    ret.longitudinalTuning.kiBP = [0., 10., 30., 40.]
-    ret.longitudinalTuning.kiV = [0.05, 0.02, 0.01, 0.005]
-    ret.longitudinalTuning.deadzoneBP = [0., 40]
-    ret.longitudinalTuning.deadzoneV = [0., 0.02]
-
-
-    # steer, gas, brake limitations VS speed
-    ret.steerMaxBP = [0.]
-    ret.steerMaxV = [1.0]
-    ret.gasMaxBP = [0., 10., 40.]
-    ret.gasMaxV = [0.5, 0.5, 0.5]
-    ret.brakeMaxBP = [0., 20.]
-    ret.brakeMaxV = [1., 0.8]
-
     ret.enableCamera = is_ecu_disconnected(fingerprint[0], FINGERPRINTS, ECU_FINGERPRINT, candidate, Ecu.fwdCamera) or has_relay
-
-    ret.stoppingControl = True
-    ret.startAccel = 0.0
-
-    # ignore CAN2 address if L-CAN on the same BUS
-    ret.mdpsBus = 1 if 593 in fingerprint[1] and 1296 not in fingerprint[1] else 0
-    ret.sasBus = 1 if 688 in fingerprint[1] and 1296 not in fingerprint[1] else 0
-    ret.sccBus = 0 if 1056 in fingerprint[0] else 1 if 1056 in fingerprint[1] and 1296 not in fingerprint[1] \
-                                                                     else 2 if 1056 in fingerprint[2] else -1
-    ret.radarOffCan = ret.sccBus == -1
-    ret.openpilotLongitudinalControl = False #TODO make ui toggle
-    ret.enableCruise = not ret.radarOffCan
-    ret.autoLcaEnabled = False
-    ret.spasEnabled = False
 
     return ret
 
   def update(self, c, can_strings):
     self.cp.update_strings(can_strings)
-    self.cp2.update_strings(can_strings)
     self.cp_cam.update_strings(can_strings)
 
-    ret = self.CS.update(self.cp, self.cp2, self.cp_cam)
-    ret.canValid = self.cp.can_valid and self.cp2.can_valid and self.cp_cam.can_valid
+    ret = self.CS.update(self.cp, self.cp_cam)
+    ret.canValid = self.cp.can_valid and self.cp_cam.can_valid
+
 
     # TODO: button presses
     buttonEvents = []
@@ -356,8 +318,8 @@ class CarInterface(CarInterfaceBase):
       if self.meg_timer:
         self.meg_timer -= 1
         meg_timer = 0
-      elif not self.CS.lkas_button_on:
-        self.meg_name = EventName.invalidLkasSetting
+      #elif not self.CS.lkas_button_on:
+      #  self.meg_name = EventName.invalidLkasSetting
       elif ret.cruiseState.standstill:
         self.meg_name = EventName.resumeRequired       
       elif self.CC.lane_change_torque_lower:
@@ -403,3 +365,5 @@ class CarInterface(CarInterfaceBase):
 
     self.frame += 1
     return can_sends
+ 
+#

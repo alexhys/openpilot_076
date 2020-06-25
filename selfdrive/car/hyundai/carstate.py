@@ -94,6 +94,7 @@ class CarState(CarStateBase):
     ret.cruiseState.available = self.main_on
     ret.cruiseState.enabled =  ret.cruiseState.available  #if not self.CP.longcontrolEnabled else ret.cruiseState.enabled
     ret.cruiseState.standstill = cp.vl["SCC11"]['SCCInfoDisplay'] == 4.
+    self.is_set_speed_in_mph = int(cp.vl["CLU11"]["CF_Clu_SPEED_UNIT"])
 
     # most HKG cars has no long control, it is safer and easier to engage by main on
 
