@@ -197,10 +197,6 @@ class CarState(CarStateBase):
       self.lkas_button_on = cp_cam.vl["LKAS11"]["CF_Lkas_LdwsSysState"]
     self.left_blinker_flash = cp.vl["CGW1"]['CF_Gway_TurnSigLh']
     self.right_blinker_flash = cp.vl["CGW1"]['CF_Gway_TurnSigRh']
-    if self.has_scc13:
-      self.scc13 = cp_scc.vl["SCC13"]
-    if self.has_scc14:
-      self.scc14 = cp_scc.vl["SCC14"]
     if self.spas_enabled:
       self.ems11 = cp.vl["EMS11"]
       self.mdps11_strang = cp_mdps.vl["MDPS11"]["CR_Mdps_StrAng"]
