@@ -44,7 +44,6 @@ class Controls:
     gc.disable()
     set_realtime_priority(3)
 
-
     # Setup sockets
     self.pm = pm
     if self.pm is None:
@@ -53,18 +52,13 @@ class Controls:
 
     self.sm = sm
     if self.sm is None:
-      socks = ['thermal', 'health', 'model', 'liveCalibration', 'dMonitoringState', 'plan', 'pathPlan', 'liveLocationKalman']
-      self.sm = messaging.SubMaster(socks, ignore_alive=['dMonitoringState'])                                     
-
-      #self.sm = messaging.SubMaster(['thermal', 'health', 'model', 'liveCalibration', \
-      #                               'dMonitoringState', 'plan', 'pathPlan', 'liveLocationKalman'])
-
+      self.sm = messaging.SubMaster(['thermal', 'health', 'model', 'liveCalibration', \
+                                     'dMonitoringState', 'plan', 'pathPlan', 'liveLocationKalman'])
 
     self.can_sock = can_sock
     if can_sock is None:
       can_timeout = None if os.environ.get('NO_CAN_TIMEOUT', False) else 100
       self.can_sock = messaging.sub_sock('can', timeout=can_timeout)
-
 
     # wait for one health and one CAN packet
     hw_type = messaging.recv_one(self.sm.sock['health']).health.hwType
@@ -282,8 +276,9 @@ class Controls:
     self.v_cruise_kph_last = self.v_cruise_kph
 
     # if stock cruise is completely disabled, then we can use our own set speed logic
+    self.CP.enableCruise = self.CI.CP.enableCruise
     if not self.CP.enableCruise:
-      self.v_cruise_kph = update_v_cruise(self.v_cruise_kph, CS.buttonEvents, self.enabled)
+      self.v_cruise_kph = update_v_cruise(self.v_cruise_kph, CS.buttonEvents, self.enabled, self.is_metric)
     elif self.CP.enableCruise and CS.cruiseState.enabled:
       self.v_cruise_kph = CS.cruiseState.speed * CV.MS_TO_KPH
 
@@ -378,9 +373,7 @@ class Controls:
     v_acc_sol = plan.vStart + dt * (a_acc_sol + plan.aStart) / 2.0
 
     # Gas/Brake PID loop
-    if self.CP.longcontrolEnabled:
-      actuators.gas, actuators.brake = self.LoC.update(self.active, CS, v_acc_sol, plan.vTargetFuture, a_acc_sol, self.CP)
-      
+    actuators.gas, actuators.brake = self.LoC.update(self.active, CS, v_acc_sol, plan.vTargetFuture, a_acc_sol, self.CP)
     # Steering PID loop and lateral MPC
     actuators.steer, actuators.steerAngle, lac_log = self.LaC.update(self.active, CS, self.CP, path_plan)
 
@@ -415,7 +408,7 @@ class Controls:
     CC.actuators = actuators
 
     CC.cruiseControl.override = True
-    CC.cruiseControl.cancel = not self.CP.enableCruise or (not self.enabled and CS.cruiseState.enabled)
+    CC.cruiseControl.cancel = self.CP.enableCruise and not self.enabled and CS.cruiseState.enabled
 
     # Some override values for Honda
     # brake discount removes a sharp nonlinearity
@@ -458,7 +451,7 @@ class Controls:
 
     if not self.hyundai_lkas and self.enabled:
       # send car controls over can
-      can_sends = self.CI.apply(CC, self.sm )
+      can_sends = self.CI.apply(CC)
       self.pm.send('sendcan', can_list_to_can_capnp(can_sends, msgtype='sendcan', valid=CS.canValid))
 
     force_decel = (self.sm['dMonitoringState'].awarenessStatus < 0.) or \
