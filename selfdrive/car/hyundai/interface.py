@@ -8,8 +8,10 @@ from selfdrive.car.hyundai.carstate import ATOMC
 
 #from selfdrive.kegman_conf import kegman_conf
 
+GearShifter = car.CarState.GearShifter
 EventName = car.CarEvent.EventName
 ButtonType = car.CarState.ButtonEvent.Type
+
 class CarInterface(CarInterfaceBase):
   def __init__(self, CP, CarController, CarState):
     super().__init__(CP, CarController, CarState)
