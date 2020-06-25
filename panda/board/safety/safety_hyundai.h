@@ -129,7 +129,7 @@ static int hyundai_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
   }
 
   if (valid) {
-    if (addr == 593 && bus == hyundai_mdps_bus) {  // debug_atom
+    if (addr == 593 && bus == hyundai_mdps_bus) {
       int torque_driver_new = ((GET_BYTES_04(to_push) & 0x7ff) * 0.79) - 808; // scale down new driver torque signal to match previous one
       // update array of samples
       update_sample(&torque_driver, torque_driver_new);
@@ -163,17 +163,6 @@ static int hyundai_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
     }
 
     // cruise control for car without SCC
-    if (addr == 871 && !hyundai_has_scc && OP_SCC_live && bus == 0) {
-      // first byte
-      int cruise_engaged = (GET_BYTES_04(to_push) & 0xFF);
-      if (cruise_engaged && !cruise_engaged_prev) {
-        controls_allowed = 1;
-      }
-      if (!cruise_engaged) {
-        controls_allowed = 0;
-      }
-      cruise_engaged_prev = cruise_engaged;
-    }
     if (addr == 608 && bus == 0 && !hyundai_has_scc && !OP_SCC_live) {
       // bit 25
       int cruise_engaged = (GET_BYTES_04(to_push) >> 25 & 0x1); // ACC main_on signal
@@ -199,7 +188,6 @@ static int hyundai_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
       }
       cruise_engaged_prev = cruise_button;
     }
-    // GAS_START: check gas pressed(START)
     // exit controls on rising edge of gas press for cars with long control
     if (addr == 608 && OP_SCC_live && bus == 0) {
       bool gas_pressed = (GET_BYTE(to_push, 7) >> 6) != 0;
@@ -225,7 +213,6 @@ static int hyundai_rx_hook(CAN_FIFOMailBox_TypeDef *to_push) {
       }
       brake_pressed_prev = brake_pressed;
     }
-    // GAS_END: check gas pressed(END)
 
     // check if stock camera ECU is on bus 0
     if ((safety_mode_cnt > RELAY_TRNS_TIMEOUT) && bus == 0 && addr == 832) {
