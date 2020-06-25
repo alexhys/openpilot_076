@@ -205,17 +205,16 @@ class CarController():
     self.apply_steer_last = apply_steer
 
     sys_warning, sys_state = self.process_hud_alert( lkas_active, CC )
-
+    
     clu11_speed = CS.clu11["CF_Clu_Vanz"]
     enabled_speed = 38 if CS.is_set_speed_in_mph  else 60
     if clu11_speed > enabled_speed or not lkas_active:
       enabled_speed = clu11_speed
-
-    if frame == 0: # initialize counts from last received count signals
-      self.lkas11_cnt = CS.lkas11["CF_Lkas_MsgCount"]
-    self.lkas11_cnt = (self.lkas11_cnt + 1) % 0x10
-
+    
     can_sends = []
+    if frame == 0: # initialize counts from last received count signals
+      self.lkas11_cnt = CS.lkas11["CF_Lkas_MsgCount"] + 1
+    self.lkas11_cnt %= 0x10
 
     can_sends.append(create_lkas11(self.packer, self.lkas11_cnt, self.car_fingerprint, apply_steer, steer_req,
                                    CS.lkas11, sys_warning, sys_state, CC, 0))
