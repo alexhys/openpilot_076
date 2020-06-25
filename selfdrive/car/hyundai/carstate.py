@@ -21,10 +21,31 @@ class CarState(CarStateBase):
     self.scc_bus = CP.sccBus
     self.leftBlinker = False
     self.rightBlinker = False
-    self.lkas_button_on = True
     self.cruise_main_button = 0
     self.mdps_error_cnt = 0
     self.spas_enabled = CP.spasEnabled
+
+    self.cruise_main_button = False
+    self.cruise_buttons = False
+
+    self.lkas_button_on = False
+    self.lkas_error = False
+
+    self.prev_cruise_main_button = False
+    self.prev_cruise_buttons = False
+
+    self.main_on = False
+    self.acc_active = False
+    self.cruise_engaged_on = False
+
+    self.Mdps_ToiUnavail = 0
+
+    self.left_blinker_flash = 0
+    self.right_blinker_flash = 0  
+    self.steerWarning = 0  
+
+    self.TSigLHSw = 0
+    self.TSigRHSw = 0
 
   def update(self, cp, cp2, cp_cam):
     global ATOMC
