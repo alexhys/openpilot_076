@@ -409,6 +409,7 @@ struct CarParams {
   longcontrolEnabled @51  :Bool;
   testBus @52 :List(Float32);
   mdpsBus @53: Int8;
+  sasBus @54: Int8;
 
 
   struct LateralParams {
