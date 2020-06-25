@@ -296,7 +296,7 @@ FEATURES = {
   # Use E_GEAR Message for Gear Selection
   "use_elect_gears": [CAR.KIA_OPTIMA_H, CAR.IONIQ_EV_LTD, CAR.KONA_EV, CAR.SONATA_H, CAR.KIA_NIRO_EV, CAR.KIA_CARDENZA_HEV, CAR.GRANDEUR_HEV],
   # Use E_EMS11 Message for Gas and Brake for Hybrid/ELectric
-  "use_elect_ems": [CAR.SONATA_H, CAR.IONIQ_EV_LTD, CAR.KIA_NIRO_EV],
+  "use_elect_ems": [CAR.KIA_OPTIMA_H, CAR.SONATA_H, CAR.IONIQ_EV_LTD, CAR.KIA_NIRO_EV],
   "has_scc13": [], 
   "has_scc14": [], 
 }
