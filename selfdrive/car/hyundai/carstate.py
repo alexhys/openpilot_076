@@ -273,18 +273,6 @@ class CarState(CarStateBase):
 
       ("CF_Lvr_GearInf", "LVR11", 0),        # Transmission Gear (0 = N or P, 1-8 = Fwd, 14 = Rev)
 
-      ("CR_Mdps_StrColTq", "MDPS12", 0),
-      ("CF_Mdps_Def", "MDPS12", 0),    #
-      ("CF_Mdps_ToiActive", "MDPS12", 0),
-      ("CF_Mdps_ToiUnavail", "MDPS12", 0),
-      ("CF_Mdps_MsgCount2", "MDPS12", 0),  #
-      ("CF_Mdps_Chksum2", "MDPS12", 0),    #
-      ("CF_Mdps_ToiFlt", "MDPS12", 0),     #
-      ("CF_Mdps_SErr", "MDPS12", 0),       #
-      ("CR_Mdps_StrTq", "MDPS12", 0),      #
-      ("CF_Mdps_FailStat", "MDPS12", 0),
-      ("CR_Mdps_OutTq", "MDPS12", 0),
-
       ("SAS_Angle", "SAS11", 0),
       ("SAS_Speed", "SAS11", 0),
 
@@ -354,7 +342,6 @@ class CarState(CarStateBase):
     if CP.carFingerprint not in FEATURES["use_elect_ems"]:
       signals += [
         ("PV_AV_CAN", "EMS12", 0),
-
         ("CF_Ems_AclAct", "EMS16", 0),
       ]
       checks += [
