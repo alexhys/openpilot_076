@@ -52,9 +52,8 @@ class CarState(CarStateBase):
     cp_mdps = cp2 if self.mdps_bus else cp
     cp_sas = cp2 if self.sas_bus else cp
     cp_scc = cp2 if self.scc_bus == 1 else cp_cam if self.scc_bus == 2 else cp
-
-    self.prev_cruise_buttons = self.cruise_buttons
     self.prev_cruise_main_button = self.cruise_main_button
+    self.prev_cruise_buttons  = self.cruise_buttons
     self.prev_left_blinker = self.leftBlinker
     self.prev_right_blinker = self.rightBlinker
     self.prev_lkas_button_on = self.lkas_button_on
@@ -87,20 +86,24 @@ class CarState(CarStateBase):
     ret.steerWarning = self.mdps_error_cnt > 100 #cp_mdps.vl["MDPS12"]['CF_Mdps_ToiUnavail'] != 0
 
     # cruise state
-    ret.cruiseState.enabled = (cp_scc.vl["SCC12"]['ACCMode'] != 0) if not self.no_radar else \
-                                      cp.vl["LVR12"]['CF_Lvr_CruiseSet'] != 0
-    ret.cruiseState.available = (cp_scc.vl["SCC11"]["MainMode_ACC"] != 0) if not self.no_radar else \
-                                      cp.vl['EMS16']['CRUISE_LAMP_M'] != 0
-    ret.cruiseState.standstill = cp_scc.vl["SCC11"]['SCCInfoDisplay'] == 4. if not self.no_radar else False
-    self.is_set_speed_in_mph = int(cp.vl["CLU11"]["CF_Clu_SPEED_UNIT"])
-    if ret.cruiseState.enabled:
-      speed_conv = CV.MPH_TO_MS if self.is_set_speed_in_mph else CV.KPH_TO_MS
-      ret.cruiseState.speed = cp_scc.vl["SCC11"]['VSetDis'] * speed_conv if not self.no_radar else \
-                                         cp.vl["LVR12"]["CF_Lvr_CruiseSet"] * speed_conv
+    #ret.cruiseState.available = True
+    #ret.cruiseState.enabled = cp.vl["SCC12"]['ACCMode'] != 0
+    self.main_on = (cp.vl["SCC11"]["MainMode_ACC"] != 0)
+    self.acc_active = (cp.vl["SCC12"]['ACCMode'] != 0)
+
+    ret.cruiseState.available = self.main_on
+    ret.cruiseState.enabled =  ret.cruiseState.available  #if not self.CP.longcontrolEnabled else ret.cruiseState.enabled
+    ret.cruiseState.standstill = cp.vl["SCC11"]['SCCInfoDisplay'] == 4.
+
+    # most HKG cars has no long control, it is safer and easier to engage by main on
+
+    #if ret.cruiseState.enabled:
+    if self.acc_active:
+      is_set_speed_in_mph = int(cp.vl["CLU11"]["CF_Clu_SPEED_UNIT"])
+      speed_conv = CV.MPH_TO_MS if is_set_speed_in_mph else CV.KPH_TO_MS
+      ret.cruiseState.speed = self.VSetDis * speed_conv
     else:
       ret.cruiseState.speed = 0
-    self.cruise_main_button = cp.vl["CLU11"]["CF_Clu_CruiseSwMain"]
-    self.cruise_buttons = cp.vl["CLU11"]["CF_Clu_CruiseSwState"]
 
     # TODO: Find brake pressure
     ret.brake = 0
@@ -178,9 +181,9 @@ class CarState(CarStateBase):
     self.cruise_main_button = cp.vl["CLU11"]["CF_Clu_CruiseSwMain"]
     self.cruise_buttons = cp.vl["CLU11"]["CF_Clu_CruiseSwState"]         # clu_CruiseSwState
     self.Lkas_LdwsSysState = cp_cam.vl["LKAS11"]["CF_Lkas_LdwsSysState"]
-    self.lkas_error = self.Lkas_LdwsSysState  == 7
-    if not self.lkas_error:
-      self.lkas_button_on = self.Lkas_LdwsSysState
+    #self.lkas_error = self.Lkas_LdwsSysState  == 7
+    #if not self.lkas_error:
+    #  self.lkas_button_on = self.Lkas_LdwsSysState
 
     # save the entire LKAS11, CLU11, SCC12 and MDPS12
     self.lkas11 = cp_cam.vl["LKAS11"]
@@ -192,9 +195,6 @@ class CarState(CarStateBase):
     self.steer_state = cp_mdps.vl["MDPS12"]['CF_Mdps_ToiActive'] #0 NOT ACTIVE, 1 ACTIVE
     self.cruise_unavail = cp.vl["TCS13"]['CF_VSM_Avail'] != 1
     self.lead_distance = cp_scc.vl["SCC11"]['ACC_ObjDist'] if not self.no_radar else 0
-    self.lkas_error = cp_cam.vl["LKAS11"]["CF_Lkas_LdwsSysState"] == 7
-    if not self.lkas_error:
-      self.lkas_button_on = cp_cam.vl["LKAS11"]["CF_Lkas_LdwsSysState"]
     self.left_blinker_flash = cp.vl["CGW1"]['CF_Gway_TurnSigLh']
     self.right_blinker_flash = cp.vl["CGW1"]['CF_Gway_TurnSigRh']
     if self.spas_enabled:
@@ -206,7 +206,6 @@ class CarState(CarStateBase):
 
   @staticmethod
   def get_can_parser(CP):
-
     signals = [
       # sig_name, sig_address, default
       ("WHL_SPD_FL", "WHL_SPD11", 0),
