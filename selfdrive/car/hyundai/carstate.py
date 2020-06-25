@@ -294,17 +294,11 @@ class CarState(CarStateBase):
       ("ACC_ObjDist", "SCC11", 0),
       ("ACC_ObjRelSpd", "SCC11", 0),
       ("ACCMode", "SCC12", 1),
-
-      ("PV_AV_CAN", "EMS12", 0),
-      ("CF_Ems_AclAct", "EMS16", 0),
-      ("Accel_Pedal_Pos","E_EMS11",0),
-      ("Brake_Pedal_Pos","E_EMS11",0),
     ]
 
     checks = [
       # address, frequency
-      ("MDPS12", 50),
-      #("TCS13", 50),
+      ("TCS13", 50),
       ("TCS15", 10),
       ("CLU11", 50),
       ("ESP12", 100),
@@ -314,9 +308,6 @@ class CarState(CarStateBase):
       ("SAS11", 100),
       ("SCC11", 50),
       ("SCC12", 50),
-      ("EMS12", 100),
-      ("EMS16", 100),
-      ("E_EMS11", 100),
     ]
     if CP.mdpsBus == 0:
       signals += [
@@ -353,21 +344,36 @@ class CarState(CarStateBase):
         ("TCU12", 100)
       ]
     elif CP.carFingerprint in FEATURES["use_elect_gears"]:
-      signals += [("Elect_Gear_Shifter", "ELECT_GEAR", 0)]
-      checks += [("ELECT_GEAR", 20)]
+      signals += [
+        ("Elect_Gear_Shifter", "ELECT_GEAR", 0),
+    ]
     else:
       signals += [
-        ("CF_Lvr_Gear", "LVR12", 0)
+        ("CF_Lvr_Gear","LVR12",0),
+      ]
+    if CP.carFingerprint not in FEATURES["use_elect_ems"]:
+      signals += [
+        ("PV_AV_CAN", "EMS12", 0),
+
+        ("CF_Ems_AclAct", "EMS16", 0),
       ]
       checks += [
-        ("LVR12", 100)
+        ("EMS12", 100),
+        ("EMS16", 100),
+      ]
+    else:
+      signals += [
+        ("Accel_Pedal_Pos","E_EMS11",0),
+        ("Brake_Pedal_Pos","E_EMS11",0),
+      ]
+      checks += [
+        ("E_EMS11", 100),
       ]
 
     return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, 0)
 
   @staticmethod
   def get_can2_parser(CP):
-
     signals = []
     checks = []
     if CP.mdpsBus == 1:
