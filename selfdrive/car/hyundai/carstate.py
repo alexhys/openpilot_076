@@ -349,7 +349,7 @@ class CarState(CarStateBase):
         ("CF_Mdps_SErr", "MDPS12", 0),
         ("CR_Mdps_StrTq", "MDPS12", 0),
         ("CF_Mdps_FailStat", "MDPS12", 0),
-        ("CR_Mdps_OutTq", "MDPS12", 0)
+        ("CR_Mdps_OutTq", "MDPS12", 0),
       ]
       checks += [
         ("MDPS12", 50)
@@ -382,7 +382,6 @@ class CarState(CarStateBase):
     if CP.carFingerprint not in FEATURES["use_elect_ems"]:
       signals += [
         ("PV_AV_CAN", "EMS12", 0),
-
         ("CF_Ems_AclAct", "EMS16", 0),
       ]
       checks += [
@@ -429,7 +428,7 @@ class CarState(CarStateBase):
       checks += [
         ("SAS11", 100)
       ]
-      
+
     return CANParser(DBC[CP.carFingerprint]['pt'], signals, checks, 1)
 
   @staticmethod
