@@ -230,6 +230,7 @@ class CarController():
       
     if CS.mdps_bus: # send mdps12 to LKAS to prevent LKAS error if no cancel cmd
       can_sends.append(create_mdps12(self.packer, frame, CS.mdps12))
+      can_sends.append(create_ems11(self.packer, CS.ems11))
 
 
     str_log1 = 'torg:{:5.0f} C={:.1f}/{:.1f} V={:.1f}/{:.1f} CV={:.1f}/{:.3f}'.format(  apply_steer, CS.lead_objspd, CS.lead_distance, self.dRel, self.vRel, self.model_speed, self.model_sum )
