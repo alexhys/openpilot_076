@@ -13,6 +13,7 @@ ButtonType = car.CarState.ButtonEvent.Type
 class CarInterface(CarInterfaceBase):
   def __init__(self, CP, CarController, CarState):
     super().__init__(CP, CarController, CarState )
+    self.cp2 = self.CS.get_can2_parser(CP)
 
 
     self.meg_timer = 0
