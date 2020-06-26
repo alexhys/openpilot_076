@@ -174,7 +174,7 @@ class CarController():
 
 
 
-  def update(self, CC, CS, frame, sm, left_lane_depart, right_lane_depart ):
+  def update(self, CC, CS, frame, sm ):
     enabled = CC.enabled
     actuators = CC.actuators
     pcm_cancel_cmd = CC.cruiseControl.cancel
