@@ -69,10 +69,9 @@ class CarController():
       return value
 
 
-  def process_hud_alert(self, enabled, CC ):
+  def process_hud_alert(self, enabled, CC, left_lane, right_lane):
+  
     visual_alert = CC.hudControl.visualAlert
-    left_lane = CC.hudControl.leftLaneVisible
-    right_lane = CC.hudControl.rightLaneVisible
 
     sys_warning = (visual_alert == VisualAlert.steerRequired)
 
@@ -173,7 +172,7 @@ class CarController():
 
 
 
-  def update(self, CC, CS, frame, sm ):
+  def update(self, CC, CS, frame, sm, left_lane, right_lane ):
     enabled = CC.enabled
     actuators = CC.actuators
     pcm_cancel_cmd = CC.cruiseControl.cancel
