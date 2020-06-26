@@ -217,8 +217,6 @@ class CarController():
 
     self.apply_steer_last = apply_steer
 
-    sys_warning, sys_state = self.process_hud_alert( lkas_active, CC, self.left_lane_depart, self.right_lane_depart )
-
     clu11_speed = CS.clu11["CF_Clu_Vanz"]
     enabled_speed = 38 if CS.is_set_speed_in_mph  else 60
     if clu11_speed > enabled_speed or not lkas_active:
