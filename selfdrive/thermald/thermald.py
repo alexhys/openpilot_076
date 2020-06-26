@@ -21,6 +21,10 @@ from selfdrive.thermald.power_monitoring import PowerMonitoring, get_battery_cap
 
 FW_SIGNATURE = get_expected_signature()
 
+import subprocess
+import re
+import time
+
 ThermalStatus = log.ThermalData.ThermalStatus
 NetworkType = log.ThermalData.NetworkType
 NetworkStrength = log.ThermalData.NetworkStrength
@@ -33,6 +37,7 @@ DISCONNECT_TIMEOUT = 5.  # wait 5 seconds before going offroad after disconnect 
 LEON = False
 last_eon_fan_val = None
 
+mediaplayer = '/data/openpilot/selfdrive/kyd/mediaplayer/'
 
 with open(BASEDIR + "/selfdrive/controls/lib/alerts_offroad.json") as json_file:
   OFFROAD_ALERTS = json.load(json_file)
@@ -150,7 +155,7 @@ def handle_fan_uno(max_cpu_temp, bat_temp, fan_speed, ignition):
 
 def thermald_thread():
   # prevent LEECO from undervoltage
-  BATT_PERC_OFF = 90 #10 if LEON else 3
+  BATT_PERC_OFF = 100 #10 if LEON else 3
 
   health_timeout = int(1000 * 2.5 * DT_TRML)  # 2.5x the expected health frequency
 
@@ -189,6 +194,19 @@ def thermald_thread():
   no_panda_cnt = 0
 
   IsDriverViewEnabled = 0
+  
+  # ip addr
+  ts_last_ip = None
+  ts_last_update_vars = 0
+  ts_last_charging_ctrl = None
+  dp_last_modified = None
+  ip_addr = '255.255.255.255'
+  
+  # sound trigger
+  sound_trigger = 1
+
+  env = dict(os.environ)
+  env['LD_LIBRARY_PATH'] = mediaplayer
 
   while 1:
     ts = sec_since_boot()
@@ -261,6 +279,17 @@ def thermald_thread():
     if is_uno:
       msg.thermal.batteryPercent = 100
       msg.thermal.batteryStatus = "Charging"
+
+    # update ip every 10 seconds
+    ts = sec_since_boot()
+    if ts_last_ip is None or ts - ts_last_ip >= 10.:
+      try:
+        result = subprocess.check_output(["ifconfig", "wlan0"], encoding='utf8')  # pylint: disable=unexpected-keyword-arg
+        ip_addr = re.findall(r"inet addr:((\d+\.){3}\d+)", result)[0][0]
+      except:
+        ip_addr = 'N/A'
+      ts_last_ip = ts
+    msg.thermal.ipAddr = ip_addr
 
     current_filter.update(msg.thermal.batteryCurrent / 1e6)
 
@@ -402,7 +431,12 @@ def thermald_thread():
       started_ts = None
       if off_ts is None:
         off_ts = sec_since_boot()
+        sound_trigger = 1
         os.system('echo powersave > /sys/class/devfreq/soc:qcom,cpubw/governor')
+
+      if sound_trigger == 1 and msg.thermal.batteryStatus == "Discharging" and started_seen and (sec_since_boot() - off_ts) > 2:
+        subprocess.Popen([mediaplayer + 'mediaplayer', '/data/openpilot/selfdrive/assets/sounds/eondetach.wav'], shell = False, stdin=None, stdout=None, stderr=None, env = env, close_fds=True)
+        sound_trigger = 0
 
       # shutdown if the battery gets lower than 3%, it's discharging, we aren't running for
       # more than a minute but we were running
