@@ -69,7 +69,7 @@ class CarController():
       return value
 
 
-  def process_hud_alert(self, enabled, CC, left_lane_depart, right_lane_depart):
+  def process_hud_alert(self, enabled, CC):
   
     visual_alert = CC.hudControl.visualAlert
     left_lane = CC.hudControl.leftLaneVisible
@@ -217,6 +217,8 @@ class CarController():
 
     self.apply_steer_last = apply_steer
 
+    sys_warning, sys_state = self.process_hud_alert( lkas_active, CC )
+
     clu11_speed = CS.clu11["CF_Clu_Vanz"]
     enabled_speed = 38 if CS.is_set_speed_in_mph  else 60
     if clu11_speed > enabled_speed or not lkas_active:
@@ -231,13 +233,11 @@ class CarController():
 
     can_sends = []
     can_sends.append(create_lkas11(self.packer, frame, self.car_fingerprint, apply_steer, lkas_active,
-                                   CS.lkas11, sys_warning, sys_state, enabled,
-                                   left_lane_depart, right_lane_depart, 0))
+                                   CS.lkas11, sys_warning, sys_state, enabled, 0))
 
     if CS.mdps_bus or CS.scc_bus == 1: # send lkas11 bus 1 if mdps or scc is on bus 1
       can_sends.append(create_lkas11(self.packer, frame, self.car_fingerprint, apply_steer, lkas_active,
-                                   CS.lkas11, sys_warning, sys_state, enabled,
-                                   left_lane_depart, right_lane_depart, 1))
+                                   CS.lkas11, sys_warning, sys_state, enabled, 1))
     if frame % 2 and CS.mdps_bus: # send clu11 to mdps if it is not on bus 0
       can_sends.append(create_clu11(self.packer, frame, CS.mdps_bus, CS.clu11, Buttons.NONE, enabled_speed))
 
