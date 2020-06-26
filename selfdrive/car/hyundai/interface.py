@@ -130,7 +130,7 @@ class CarInterface(CarInterfaceBase):
       #tire_stiffness_factor = 1.125 # LiveParameters (Tunder's 2020)
 
  
-    elif candidate == CAR.SANTA_FE:
+    elif candidate == CAR.SANTAFE:
       ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 3982. * CV.LB_TO_KG + STD_CARGO_KG
       ret.wheelbase = 2.766
