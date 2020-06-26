@@ -118,7 +118,7 @@ class CarState(CarStateBase):
 
     self.VSetDis = cp.vl["SCC11"]['VSetDis']
     self.clu_Vanz = cp.vl["CLU11"]["CF_Clu_Vanz"]
-]
+    
     ret.vEgo = self.clu_Vanz * CV.KPH_TO_MS
 
 
