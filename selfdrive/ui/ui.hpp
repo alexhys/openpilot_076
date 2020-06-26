@@ -160,7 +160,6 @@ typedef struct UIScene {
   bool batteryCharging;
   float freeSpace;
   cereal::ThermalData::ThermalStatus thermalStatus;
-  char ipAddr[20];
   int paTemp;
   cereal::HealthData::HwType hwType;
   int satelliteCount;
