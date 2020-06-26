@@ -69,7 +69,7 @@ class CarController():
       return value
 
 
-  def process_hud_alert(self, enabled, CC):
+  def process_hud_alert(self, enabled, CC, left_lane_depart, right_lane_depart):
   
     visual_alert = CC.hudControl.visualAlert
     left_lane = CC.hudControl.leftLaneVisible
@@ -174,7 +174,7 @@ class CarController():
 
 
 
-  def update(self, CC, CS, frame, sm ):
+  def update(self, CC, CS, frame, sm, left_lane_depart, right_lane_depart ):
     enabled = CC.enabled
     actuators = CC.actuators
     pcm_cancel_cmd = CC.cruiseControl.cancel
@@ -217,7 +217,7 @@ class CarController():
 
     self.apply_steer_last = apply_steer
 
-    sys_warning, sys_state = self.process_hud_alert( lkas_active, CC )
+    sys_warning, sys_state = self.process_hud_alert( lkas_active, CC, left_lane_depart, right_lane_depart )
 
     clu11_speed = CS.clu11["CF_Clu_Vanz"]
     enabled_speed = 38 if CS.is_set_speed_in_mph  else 60
