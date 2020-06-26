@@ -1,6 +1,9 @@
 from cereal import car, log
+from common.numpy_fast import clip
 from selfdrive.car import apply_std_steer_torque_limits
-from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, create_lfa_mfa, create_mdps12, create_ems11
+from selfdrive.car.hyundai.hyundaican import create_lkas11, create_clu11, create_lfa_mfa, \
+                                             create_scc11, create_scc12, create_mdps12, \
+                                             create_scc13, create_scc14, create_ems11
 from selfdrive.car.hyundai.values import Buttons, SteerLimitParams, CAR
 from opendbc.can.packer import CANPacker
 from selfdrive.config import Conversions as CV
@@ -23,10 +26,19 @@ class CarController():
     self.steer_rate_limited = False
     self.resume_cnt = 0
     self.lkas11_cnt = 0
+    self.scc12_cnt = 0
     self.last_resume_frame = 0
     self.last_lead_distance = 0
-
-
+    self.turning_signal_timer = 0
+    self.lkas_button_on = True
+    self.longcontrol = CP.openpilotLongitudinalControl
+    self.scc_live = not CP.radarOffCan
+    if CP.spasEnabled:
+      self.en_cnt = 0
+      self.apply_steer_ang = 0.0
+      self.en_spas = 3
+      self.mdps11_stat_last = 0
+      self.spas_always = False
 
     self.nBlinker = 0
     self.lane_change_torque_lower = 0
@@ -205,32 +217,45 @@ class CarController():
     self.apply_steer_last = apply_steer
 
     sys_warning, sys_state = self.process_hud_alert( lkas_active, CC )
-    
+
     clu11_speed = CS.clu11["CF_Clu_Vanz"]
     enabled_speed = 38 if CS.is_set_speed_in_mph  else 60
     if clu11_speed > enabled_speed or not lkas_active:
       enabled_speed = clu11_speed
-    
+
     if frame == 0: # initialize counts from last received count signals
       self.lkas11_cnt = CS.lkas11["CF_Lkas_MsgCount"]
-      
+      self.scc12_cnt = CS.scc12["CR_VSM_Alive"] + 1 if not CS.no_radar else 0
+
     self.lkas11_cnt = (self.lkas11_cnt + 1) % 0x10
+    self.scc12_cnt %= 0xF
 
     can_sends = []
     can_sends.append(create_lkas11(self.packer, frame, self.car_fingerprint, apply_steer, lkas_active,
                                    CS.lkas11, sys_warning, sys_state, enabled, left_lane, right_lane,
                                    left_lane_warning, right_lane_warning, 0))
-                                   
-    if CS.mdps_bus == 1: # send lkas11 bus 1 if mdps or scc is on bus 1
+
+    if CS.mdps_bus or CS.scc_bus == 1: # send lkas11 bus 1 if mdps or scc is on bus 1
       can_sends.append(create_lkas11(self.packer, frame, self.car_fingerprint, apply_steer, lkas_active,
                                    CS.lkas11, sys_warning, sys_state, enabled, left_lane, right_lane,
                                    left_lane_warning, right_lane_warning, 1))
     if frame % 2 and CS.mdps_bus: # send clu11 to mdps if it is not on bus 0
       can_sends.append(create_clu11(self.packer, frame, CS.mdps_bus, CS.clu11, Buttons.NONE, enabled_speed))
-      
-    if CS.mdps_bus: # send mdps12 to LKAS to prevent LKAS error if no cancel cmd
+
+    if pcm_cancel_cmd and self.longcontrol:
+      can_sends.append(create_clu11(self.packer, frame, CS.scc_bus, CS.clu11, Buttons.CANCEL, clu11_speed))
+    elif CS.mdps_bus: # send mdps12 to LKAS to prevent LKAS error if no cancel cmd
       can_sends.append(create_mdps12(self.packer, frame, CS.mdps12))
-      can_sends.append(create_ems11(self.packer, CS.ems11))
+
+    # send scc to car if longcontrol enabled and SCC not on bus 0 or ont live
+    if self.longcontrol and (CS.scc_bus or not self.scc_live) and frame % 2 == 0: 
+      can_sends.append(create_scc12(self.packer, apply_accel, enabled, self.scc12_cnt, self.scc_live, CS.scc12))
+      can_sends.append(create_scc11(self.packer, frame, enabled, set_speed, lead_visible, self.scc_live, CS.scc11))
+      if CS.has_scc13 and frame % 20 == 0:
+        can_sends.append(create_scc13(self.packer, CS.scc13))
+      if CS.has_scc14:
+        can_sends.append(create_scc14(self.packer, enabled, CS.scc14))
+      self.scc12_cnt += 1
 
 
     str_log1 = 'torg:{:5.0f} C={:.1f}/{:.1f} V={:.1f}/{:.1f} CV={:.1f}/{:.3f}'.format(  apply_steer, CS.lead_objspd, CS.lead_distance, self.dRel, self.vRel, self.model_speed, self.model_sum )
@@ -251,7 +276,7 @@ class CarController():
         self.resume_cnt = 0
       # when lead car starts moving, create 6 RES msgs
       elif CS.lead_distance != self.last_lead_distance and (frame - self.last_resume_frame) > 5:
-        can_sends.append(create_clu11(self.packer, frame, CS.clu11, Buttons.RES_ACCEL, clu11_speed))
+        can_sends.append(create_clu11(self.packer, frame, CS.scc_bus, CS.clu11, Buttons.RES_ACCEL, clu11_speed))
         self.resume_cnt += 1
         # interval after 6 msgs
         if self.resume_cnt > 5:
@@ -261,11 +286,40 @@ class CarController():
     elif self.last_lead_distance != 0:
       self.last_lead_distance = 0
 
-
     # 20 Hz LFA MFA message
     if frame % 5 == 0 and self.car_fingerprint in [CAR.SONATA, CAR.PALISADE]:
       can_sends.append(create_lfa_mfa(self.packer, frame, enabled))
 
-    # counter inc
-    self.lkas11_cnt += 1
+    if CS.spas_enabled:
+      if CS.mdps_bus:
+        can_sends.append(create_ems11(self.packer, CS.ems11, spas_active))
+
+      # SPAS11 50hz
+      if (frame % 2) == 0:
+        if CS.mdps11_stat == 7 and not self.mdps11_stat_last == 7:
+          self.en_spas == 7
+          self.en_cnt = 0
+
+        if self.en_spas == 7 and self.en_cnt >= 8:
+          self.en_spas = 3
+          self.en_cnt = 0
+  
+        if self.en_cnt < 8 and spas_active:
+          self.en_spas = 4
+        elif self.en_cnt >= 8 and spas_active:
+          self.en_spas = 5
+
+        if not spas_active:
+          self.apply_steer_ang = CS.mdps11_strang
+          self.en_spas = 3
+          self.en_cnt = 0
+
+        self.mdps11_stat_last = CS.mdps11_stat
+        self.en_cnt += 1
+        can_sends.append(create_spas11(self.packer, self.car_fingerprint, (frame // 2), self.en_spas, self.apply_steer_ang, CS.mdps_bus))
+
+      # SPAS12 20Hz
+      if (frame % 5) == 0:
+        can_sends.append(create_spas12(CS.mdps_bus))
+
     return can_sends

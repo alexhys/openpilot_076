@@ -297,6 +297,8 @@ struct ThermalData {
   memUsedPercent @19 :Int8;
   cpuPerc @20 :Int8;
 
+  ipAddr @25 :Text;
+  
   enum ThermalStatus {
     green @0;   # all processes run
     yellow @1;  # critical processes run (kill uploader), engage still allowed
@@ -800,6 +802,7 @@ struct PathPlan {
   desire @17 :Desire;
   laneChangeState @18 :LaneChangeState;
   laneChangeDirection @19 :LaneChangeDirection;
+  laneChangeBlocked @20 :LaneChangeBlocked;
 
   enum Desire {
     none @0;
@@ -820,6 +823,11 @@ struct PathPlan {
 
   enum LaneChangeDirection {
     none @0;
+    left @1;
+    right @2;
+  }
+  enum LaneChangeBlocked {
+    off @0;
     left @1;
     right @2;
   }

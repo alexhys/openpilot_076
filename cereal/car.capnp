@@ -114,6 +114,11 @@ struct CarEvent @0x9b1657f34caf3ad3 {
     steerTorqueOver @89;
     steerTorqueLow @90;
     laneChangeManual @91;
+    preventLaneChange @92;
+    leftBlindspot @93;
+    rightBlindspot @94;
+    turningIndicatorOn @95;
+    lkasButtonOff @96;
   }
 }
 
@@ -335,6 +340,14 @@ struct CarControl {
       chimeWarningRepeat @6;
       chimePrompt @7;
       chimeWarning2Repeat @8;
+	    chimeReady @9;
+  	  chimeDoorOpen @10;
+  	  chimeGearDrive @11;
+  	  chimeLaneChange @12;
+  	  chimeLaneDeparture @13;
+  	  chimeRoadWarning @14;
+  	  chimeSeatBelt @15;
+  	  chimeViewUncertain @16;
     }
   }
 }
@@ -410,6 +423,9 @@ struct CarParams {
   testBus @52 :List(Float32);
   mdpsBus @53: Int8;
   sasBus @54: Int8;
+  sccBus @55: Int8;
+  autoLcaEnabled @56: Bool;
+  spasEnabled @57: Bool;
 
 
   struct LateralParams {

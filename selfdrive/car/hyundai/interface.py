@@ -6,14 +6,17 @@ from selfdrive.car import STD_CARGO_KG, scale_rot_inertia, scale_tire_stiffness,
 from selfdrive.car.interfaces import CarInterfaceBase, MAX_CTRL_SPEED
 from selfdrive.car.hyundai.carstate import ATOMC
 
+GearShifter = car.CarState.GearShifter
+
 #from selfdrive.kegman_conf import kegman_conf
 
 EventName = car.CarEvent.EventName
 ButtonType = car.CarState.ButtonEvent.Type
 class CarInterface(CarInterfaceBase):
   def __init__(self, CP, CarController, CarState):
-    super().__init__(CP, CarController, CarState )
+    super().__init__(CP, CarController, CarState)
     self.cp2 = self.CS.get_can2_parser(CP)
+    self.lkas_button_alert = False
 
 
     self.meg_timer = 0
@@ -198,13 +201,18 @@ class CarInterface(CarInterfaceBase):
       ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
       ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.16], [0.01]]
     elif candidate in [CAR.KIA_OPTIMA, CAR.KIA_OPTIMA_H]:
-      ret.lateralTuning.pid.kf = 0.00005
+      #ret.lateralTuning.pid.kf = 0.00005
       ret.mass = 3558. * CV.LB_TO_KG
       ret.wheelbase = 2.80
-      ret.steerRatio = 13.75
+      #ret.steerRatio = 13.75
       tire_stiffness_factor = 0.5
-      ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
-      ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      #ret.lateralTuning.pid.kiBP, ret.lateralTuning.pid.kpBP = [[0.], [0.]]
+      #ret.lateralTuning.pid.kpV, ret.lateralTuning.pid.kiV = [[0.25], [0.05]]
+      ret.steerRatio = ATOMC.steerRatio  #10.5  #12.5
+      ret.steerRateCost = ATOMC.steerRateCost #0.4 #0.4
+      ret.lateralTuning.pid.kf = ATOMC.steer_Kp1[0] #0.00001
+      ret.lateralTuning.pid.kpV = ATOMC.steer_Kp1  #[0.12, 0.15]
+      ret.lateralTuning.pid.kiV = ATOMC.steer_Ki1  #[0.02, 0.02]
     elif candidate == CAR.KIA_STINGER:
       #ret.lateralTuning.pid.kf = 0.00005
       #ret.mass = 1825. + STD_CARGO_KG
@@ -261,7 +269,42 @@ class CarInterface(CarInterfaceBase):
     ret.tireStiffnessFront, ret.tireStiffnessRear = scale_tire_stiffness(ret.mass, ret.wheelbase, ret.centerToFront,
                                                                          tire_stiffness_factor=tire_stiffness_factor)
 
+
+    # no rear steering, at least on the listed cars above
+    ret.steerRatioRear = 0.
+    ret.steerControlType = car.CarParams.SteerControlType.torque
+
+    ret.longitudinalTuning.kpBP = [0., 10., 40.]
+    ret.longitudinalTuning.kpV = [1.2, 0.6, 0.2]
+    ret.longitudinalTuning.kiBP = [0., 10., 30., 40.]
+    ret.longitudinalTuning.kiV = [0.05, 0.02, 0.01, 0.005]
+    ret.longitudinalTuning.deadzoneBP = [0., 40]
+    ret.longitudinalTuning.deadzoneV = [0., 0.02]
+
+
+    # steer, gas, brake limitations VS speed
+    ret.steerMaxBP = [0.]
+    ret.steerMaxV = [1.0]
+    ret.gasMaxBP = [0., 10., 40.]
+    ret.gasMaxV = [0.5, 0.5, 0.5]
+    ret.brakeMaxBP = [0., 20.]
+    ret.brakeMaxV = [1., 0.8]
+
     ret.enableCamera = is_ecu_disconnected(fingerprint[0], FINGERPRINTS, ECU_FINGERPRINT, candidate, Ecu.fwdCamera) or has_relay
+
+    ret.stoppingControl = True
+    ret.startAccel = 0.0
+
+    # ignore CAN2 address if L-CAN on the same BUS
+    ret.mdpsBus = 1 if 593 in fingerprint[1] and 1296 not in fingerprint[1] else 0
+    ret.sasBus = 1 if 688 in fingerprint[1] and 1296 not in fingerprint[1] else 0
+    ret.sccBus = 0 if 1056 in fingerprint[0] else 1 if 1056 in fingerprint[1] and 1296 not in fingerprint[1] \
+                                                                     else 2 if 1056 in fingerprint[2] else -1
+    ret.radarOffCan = ret.sccBus == -1
+    ret.openpilotLongitudinalControl = False #TODO make ui toggle
+    ret.enableCruise = not ret.radarOffCan
+    ret.autoLcaEnabled = False
+    ret.spasEnabled = False
 
     return ret
 
@@ -273,6 +316,29 @@ class CarInterface(CarInterfaceBase):
     ret = self.CS.update(self.cp, self.cp2, self.cp_cam)
     ret.canValid = self.cp.can_valid and self.cp2.can_valid and self.cp_cam.can_valid
 
+    if self.CP.enableCruise and not self.CC.scc_live:
+      self.CP.enableCruise = False
+    elif self.CC.scc_live and not self.CP.enableCruise:
+      self.CP.enableCruise = True
+
+    # most HKG cars has no long control, it is safer and easier to engage by main on
+    if not self.CP.openpilotLongitudinalControl:
+      ret.cruiseState.enabled = ret.cruiseState.available
+    # some Optima only has blinker flash signal
+    #if self.CP.carFingerprint == CAR.KIA_OPTIMA:
+    #  ret.leftBlinker = bool(self.CS.left_blinker_flash or self.CS.prev_left_blinker and self.CC.turning_signal_timer)
+    #  ret.rightBlinker = bool(self.CS.right_blinker_flash or self.CS.prev_right_blinker and self.CC.turning_signal_timer)
+
+    # turning indicator alert logic
+    if (ret.leftBlinker or ret.rightBlinker or self.CC.turning_signal_timer) and ret.vEgo < LANE_CHANGE_SPEED_MIN - 1.2:
+      self.CC.turning_indicator_alert = True 
+    else:
+      self.CC.turning_indicator_alert = False
+
+    # LKAS button alert logic: reverse on/off
+    #if not self.CS.lkas_error and self.CS.lkas_button_on != self.CS.prev_lkas_button_on:
+      #self.CC.lkas_button_on = not self.CC.lkas_button_on
+      #self.lkas_button_alert = not self.CC.lkas_button_on
 
     # TODO: button presses
     buttonEvents = []
