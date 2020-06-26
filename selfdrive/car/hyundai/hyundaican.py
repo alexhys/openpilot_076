@@ -5,7 +5,7 @@ hyundai_checksum = crcmod.mkCrcFun(0x11D, initCrc=0xFD, rev=False, xorOut=0xdf)
 
 
 def create_lkas11(packer, frame, car_fingerprint, apply_steer, steer_req,
-                  lkas11, sys_warning, sys_state, CC):
+                  lkas11, sys_warning, sys_state, CC, bus):
 
   values = lkas11
   values["CF_Lkas_LdwsSysState"] = sys_state
