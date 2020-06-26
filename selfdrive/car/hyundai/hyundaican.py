@@ -11,17 +11,16 @@ def create_lkas11(packer, frame, car_fingerprint, apply_steer, steer_req,
   values = lkas11
   values["CF_Lkas_LdwsSysState"] = sys_state
   values["CF_Lkas_SysWarning"] = 3 if sys_warning else 0
+  values["CF_Lkas_LdwsLHWarning"] = left_lane_depart
+  values["CF_Lkas_LdwsRHWarning"] = right_lane_depart
   values["CR_Lkas_StrToqReq"] = apply_steer
   values["CF_Lkas_ActToi"] = steer_req
   values["CF_Lkas_ToiFlt"] = 0
   values["CF_Lkas_MsgCount"] = frame % 0x10
   values["CF_Lkas_Chksum"] = 0
-  values["CF_Lkas_LdwsLHWarning"] = left_lane_depart
-  values["CF_Lkas_LdwsRHWarning"] = right_lane_depart  
 
-
-  if car_fingerprint in [CAR.SONATA, CAR.PALISADE]:
-    values["CF_Lkas_Bca_R"] = int(CC.hudControl.leftLaneVisible) + (int(CC.hudControl.rightLaneVisible) << 1)
+  if car_fingerprint in [CAR.SONATA, CAR.PALISADE, CAR.SONATA_HEV, CAR.SANTAFE]:
+    values["CF_Lkas_Bca_R"] = int(left_lane) + (int(right_lane) << 1)
     values["CF_Lkas_LdwsOpt_USM"] = 2
 
     # FcwOpt_USM 5 = Orange blinking car + lanes
@@ -30,20 +29,13 @@ def create_lkas11(packer, frame, car_fingerprint, apply_steer, steer_req,
     # FcwOpt_USM 2 = Green car + lanes
     # FcwOpt_USM 1 = White car + lanes
     # FcwOpt_USM 0 = No car + lanes
-    values["CF_Lkas_FcwOpt_USM"] = 2 if CC.enabled else 1
+    values["CF_Lkas_FcwOpt_USM"] = 2 if enabled else 1
 
     # SysWarning 4 = keep hands on wheel
     # SysWarning 5 = keep hands on wheel (red)
     # SysWarning 6 = keep hands on wheel (red) + beep
     # Note: the warning is hidden while the blinkers are on
     values["CF_Lkas_SysWarning"] = 4 if sys_warning else 0
-
-  elif car_fingerprint == CAR.HYUNDAI_GENESIS:
-    # This field is actually LdwsActivemode
-    # Genesis and Optima fault when forwarding while engaged
-    values["CF_Lkas_Bca_R"] = 2
-  elif car_fingerprint == CAR.KIA_OPTIMA:
-    values["CF_Lkas_Bca_R"] = 0
 
   dat = packer.make_can_msg("LKAS11", 0, values)[2]
 
@@ -109,7 +101,7 @@ def create_scc11(packer, frame, enabled, set_speed, lead_visible, scc_live, scc1
     values["MainMode_ACC"] = 1
     values["VSetDis"] = set_speed
     values["ObjValid"] = 1 if enabled else 0
-#  values["ACC_ObjStatus"] = lead_visible
+    #values["ACC_ObjStatus"] = lead_visible
 
   return packer.make_can_msg("SCC11", 0, values)
 
@@ -126,6 +118,43 @@ def create_scc12(packer, apply_accel, enabled, cnt, scc_live, scc12):
   values["CR_VSM_ChkSum"] = 16 - sum([sum(divmod(i, 16)) for i in dat]) % 16
 
   return packer.make_can_msg("SCC12", 0, values)
+
+def create_scc13(packer, scc13):
+  values = scc13
+  return packer.make_can_msg("SCC13", 0, values)
+
+def create_scc14(packer, enabled, scc14):
+  values = scc14
+  if enabled:
+    values["JerkUpperLimit"] = 3.2
+    values["JerkLowerLimit"] = 0.1
+    values["SCCMode"] = 1
+    values["ComfortBandUpper"] = 0.24
+    values["ComfortBandLower"] = 0.24
+
+  return packer.make_can_msg("SCC14", 0, values)
+
+def create_spas11(packer, car_fingerprint, frame, en_spas, apply_steer, bus):
+  values = {
+    "CF_Spas_Stat": en_spas,
+    "CF_Spas_TestMode": 0,
+    "CR_Spas_StrAngCmd": apply_steer,
+    "CF_Spas_BeepAlarm": 0,
+    "CF_Spas_Mode_Seq": 2,
+    "CF_Spas_AliveCnt": frame % 0x200,
+    "CF_Spas_Chksum": 0,
+    "CF_Spas_PasVol": 0,
+  }
+  dat = packer.make_can_msg("SPAS11", 0, values)[2]
+  if car_fingerprint in CHECKSUM["crc8"]:
+    dat = dat[:6]
+    values["CF_Spas_Chksum"] = hyundai_checksum(dat)
+  else:
+    values["CF_Spas_Chksum"] = sum(dat[:6]) % 256
+  return packer.make_can_msg("SPAS11", bus, values)
+
+def create_spas12(bus):
+  return [1268, 0, "\x00\x00\x00\x00\x00\x00\x00\x00", bus]
 
 def create_ems11(packer, ems11, enabled):
   values = ems11
