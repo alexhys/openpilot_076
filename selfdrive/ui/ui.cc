@@ -475,7 +475,8 @@ void handle_message(UIState *s, SubMaster &sm) {
     scene.paTemp = data.getPa0();
 
     scene.maxBatTemp = data.getBat();
-    scene.maxCpuTemp = data.getCpu0(); 
+    scene.maxCpuTemp = data.getCpu0();
+    scene.ipAddr = data.getipAddr(); 
 
     s->thermal_started = data.getStarted();
   }
