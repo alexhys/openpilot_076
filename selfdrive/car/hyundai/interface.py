@@ -421,7 +421,10 @@ class CarInterface(CarInterfaceBase):
     return self.CS.out
 
   def apply(self, c, sm ):
-    can_sends = self.CC.update(c, self.CS, self.frame, sm, left_lane_depart, right_lane_depart)
+    can_sends = self.CC.update(c.enabled, self.CS, self.frame, sm, c.actuators,
+                               c.cruiseControl.cancel, c.hudControl.visualAlert, c.hudControl.leftLaneVisible,
+                               c.hudControl.rightLaneVisible, c.hudControl.leftLaneDepart, c.hudControl.rightLaneDepart,
+                               c.hudControl.setSpeed, c.hudControl.leadVisible)    
 
     self.frame += 1
     return can_sends
